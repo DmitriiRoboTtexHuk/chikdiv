@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'PushLoad.dart' show MainWebScreenPUSH;
 import 'Settings.dart' show SettingsScreen;
 import 'chooseLVL.dart' show LevelSelectScreen;
 import 'game.dart' show ChickDiveGame;
@@ -31,7 +32,7 @@ class ChickChickDiveMenuScreen extends StatelessWidget {
               child: GestureDetector(
                 onTap: () {
                   Navigator.of(context).push(
-                    MaterialPageRoute(builder: (context) => WebviewScreen(webUrl:"https://chickchickdive.com/privacy-policy.html")),
+                    MaterialPageRoute(builder: (context) => MainWebScreenPUSH(webUrl:"https://chickchickdive.com/privacy-policy.html")),
                   );
                 },
                 child: Container(

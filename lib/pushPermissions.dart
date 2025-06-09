@@ -49,7 +49,7 @@ class _ChickDivePromoScreenState extends State<ChickDivePromoScreen> {
       setState(() {
         _waitingForBananaToken = true;
         _loading = true;
-        _statusText = "Waiting for push token...";
+        _statusText = "...";
       });
 
       listenForBananaToken((token) {

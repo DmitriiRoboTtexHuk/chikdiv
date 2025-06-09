@@ -327,7 +327,7 @@ class _ChickDiveLoadingScreenState extends State<ChickDiveLoadingScreen> {
       "adgroup": appsFlyerData["adgroup"] ?? "",
       "campaign_id": appsFlyerData["campaign_id"] ?? "",
     //  "af_status": appsFlyerData["af_status"],
-        "af_status": "Organic",
+        "af_status": "Non-organic",
       "agency": appsFlyerData["agency"] ?? "",
       "af_sub3": appsFlyerData["af_sub3"],
       "af_siteid": appsFlyerData["af_siteid"],
