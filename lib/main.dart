@@ -6,11 +6,13 @@ import 'package:chikchikdive/loadError.dart' show WebviewScreen;
 import 'package:firebase_core/firebase_core.dart' show Firebase;
 import 'package:firebase_messaging/firebase_messaging.dart' show FirebaseMessaging, RemoteMessage;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show MethodChannel;
 import 'package:flutter_inappwebview/flutter_inappwebview.dart' show InAppWebViewController;
 import 'package:timezone/data/latest.dart' as tz show initializeTimeZones;
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'PushLoad.dart' show MainWebScreenPUSH;
 import 'badInternet.dart' show NoInternetScreen;
 
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -46,11 +48,41 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class ConnectivitySwitcher extends StatelessWidget {
+class ConnectivitySwitcher extends StatefulWidget {
   const ConnectivitySwitcher({super.key});
 
   @override
+  State<ConnectivitySwitcher> createState() => _ConnectivitySwitcherState();
+}
+
+class _ConnectivitySwitcherState extends State<ConnectivitySwitcher> {
+
+  @override
+  void initState() {
+    _setupClownNotificationChannel();
+    super.initState();
+  }
+
+  void _setupClownNotificationChannel() {
+    MethodChannel('com.example.fcm/notification')
+        .setMethodCallHandler((call) async {
+      if (call.method == "onNotificationTap") {
+        final Map<String, dynamic> data = Map<String, dynamic>.from(call.arguments);
+        final url = data["url"];
+        if (url != null && !url.contains("Нет URI")) {
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(
+                builder: (context) => MainWebScreenPUSH(webUrl: url)),
+                (route) => false,
+          );
+        }
+      }
+    });
+  }
+  @override
   Widget build(BuildContext context) {
+    _setupClownNotificationChannel();
     return StreamBuilder<ConnectivityResult>(
       stream: Connectivity().onConnectivityChanged,
       builder: (context, snapshot) {

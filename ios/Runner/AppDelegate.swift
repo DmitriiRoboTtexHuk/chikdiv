@@ -116,13 +116,13 @@ import FirebaseMessaging
     let alert = aps?["alert"] as? [String: Any]
     let title = alert?["title"] as? String ?? "Без заголовка"
     let body = alert?["body"] as? String ?? "Без текста"
-    let uri = userInfo["uri"] as? String ?? "Нет URI"
+    let uri = userInfo["url"] as? String ?? "Нет URI"
 
     // Создание структуры данных для передачи во Flutter
     let notificationData: [String: Any] = [
       "title": title,
       "body": body,
-      "uri": uri,
+      "url": uri,
       "data": userInfo
     ]
 
@@ -146,13 +146,13 @@ import FirebaseMessaging
     // Извлечение необходимых данных: title, body и uri
     let title = (userInfo["title"] as? String) ?? "No title"
     let body = (userInfo["body"] as? String) ?? "No body"
-    let uri = (userInfo["uri"] as? String) ?? "No URI"
+    let uri = (userInfo["url"] as? String) ?? "No URI"
 
     // Формируем данные для передачи в Flutter
     let notificationData: [String: Any] = [
       "title": title,
       "body": body,
-      "uri": uri
+      "url": uri
     ]
 
     // Проверяем наличие FlutterViewController
