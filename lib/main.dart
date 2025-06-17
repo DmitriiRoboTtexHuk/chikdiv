@@ -14,6 +14,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'PushLoad.dart' show MainWebScreenPUSH;
 import 'badInternet.dart' show NoInternetScreen;
+import 'loading.dart' show ChickDiveLoadingScreen;
 
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   print("Handling a background message: ${message.messageId}");
@@ -36,14 +37,49 @@ void main() async{
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
+
+  Future<Widget> _getStartScreen() async {
+    final prefs = await SharedPreferences.getInstance();
+    final afStatus = prefs.getString('af_status');
+
+    if (afStatus == null || afStatus.isEmpty) {
+      // Если нет значения — показываем загрузочный экран
+      return ChickDiveLoadingScreen("");
+    } else if (afStatus.contains("Organic")) {
+      final webUrl = prefs.getString('bad') ?? " ";
+
+      // Если webUrl пустой или состоит только из пробелов, показываем ChickDiveLoadingScreen
+      if (webUrl.trim().isEmpty) {
+        return ChickDiveLoadingScreen("");
+      } else {
+        return WebviewScreen(webUrl: webUrl);
+      }
+    } else if (afStatus.contains("Non-Organic")) {
+      return ChickChickDiveMenuScreen();
+    } else {
+      // На всякий случай fallback — тоже загрузочный экран
+      return ChickDiveLoadingScreen("");
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      home: const ConnectivitySwitcher(),
+      home: FutureBuilder<Widget>(
+        future: _getStartScreen(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.done) {
+            return snapshot.data!;
+          }
+          // Пока грузится — просто сплэш или загрузка
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        },
+      ),
     );
   }
 }
@@ -88,7 +124,7 @@ class _ConnectivitySwitcherState extends State<ConnectivitySwitcher> {
       builder: (context, snapshot) {
         final connected = snapshot.data != ConnectivityResult.none;
         if (!snapshot.hasData) {
-          return const ChickDivePromoScreen();
+          return  ChickDivePromoScreen(payload: {},af_id: "",);
         }
         return connected
             ? const InitialScreenSelector()
@@ -106,7 +142,7 @@ class InitialScreenSelector extends StatelessWidget {
     final String? bad = prefs.getString('bad');
     if (bad == null) {
       // Не было ничего сохранено — показываем первый экран
-      return const ChickDivePromoScreen();
+      return  ChickDivePromoScreen(payload: {},af_id: "",);
     } else if (bad.isEmpty) {
       // Было сохранено пустое — показываем меню
       return ChickChickDiveMenuScreen();

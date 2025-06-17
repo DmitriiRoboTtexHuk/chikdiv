@@ -6,84 +6,66 @@ import FirebaseMessaging
 @main
 @objc class AppDelegate: FlutterAppDelegate, MessagingDelegate {
   
-  let methodChannelName = "com.example.app"
-
-  override func application(
-    _ application: UIApplication,
-    didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
-  ) -> Bool {
-    
-      // Инициализация Firebase
+    let fcmTokenChannelName = "com.example.fcm/token"
+    var cachedFcmToken: String?
+    let methodChannelName = "com.example.app"
+    override func application(
+      _ application: UIApplication,
+      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
+    ) -> Bool {
       FirebaseApp.configure()
       Messaging.messaging().delegate = self
-      
 
-    
-    // Запрос разрешения на уведомления
-    UNUserNotificationCenter.current().delegate = self
-    let authOptions: UNAuthorizationOptions = [.alert, .badge, .sound]
-    UNUserNotificationCenter.current().requestAuthorization(options: authOptions) { [weak self] granted, error in
-      if let error = error {
-        print("Ошибка при запросе разрешений на уведомления: \(error.localizedDescription)")
-      } else {
-        print("Разрешение на уведомления предоставлено: \(granted)")
-        
-        if granted {
-          DispatchQueue.main.async {
-            application.registerForRemoteNotifications()
-          }
-          
-          // Попытка получить FCM-токен сразу
-          Messaging.messaging().token { token, error in
-            if let error = error {
-              print("Ошибка получения FCM токена: \(error.localizedDescription)")
-            } else if let token = token {
-              print("FCM токен получен: \(token)")
-              self?.sendTokenToFlutter(token: token)
+
+
+        // ...
+
+        if let controller = window?.rootViewController as? FlutterViewController {
+          let fcmTokenChannel = FlutterMethodChannel(name: fcmTokenChannelName, binaryMessenger: controller.binaryMessenger)
+          fcmTokenChannel.setMethodCallHandler { [weak self] (call: FlutterMethodCall, result: @escaping FlutterResult) in
+            if call.method == "requestToken" {
+              // ЕСЛИ токен уже есть в кеше — сразу вернём его!
+              if let cached = self?.cachedFcmToken, !cached.isEmpty {
+                print("FCM токен возвращён из кеша: \(cached)")
+                result(cached)
+              } else {
+                // Если нет — получаем у Firebase
+                Messaging.messaging().token { token, error in
+                  if let error = error {
+                    print("Ошибка получения FCM токена: \(error.localizedDescription)")
+                    result(FlutterError(code: "FCM_TOKEN_ERROR", message: "Ошибка получения FCM токена", details: error.localizedDescription))
+                  } else if let token = token {
+                    print("FCM токен получен по запросу: \(token)")
+                    self?.cachedFcmToken = token
+                    result(token)
+                  } else {
+                    result(FlutterError(code: "FCM_TOKEN_NULL", message: "FCM токен не получен", details: nil))
+                  }
+                }
+              }
+            } else {
+              result(FlutterMethodNotImplemented)
             }
           }
         }
-      }
-    }
-    
-    // Настройка MethodChannel
-    if let controller = window?.rootViewController as? FlutterViewController {
-      let methodChannel = FlutterMethodChannel(name: methodChannelName, binaryMessenger: controller.binaryMessenger)
-      
-      // Обработчик вызовов MethodChannel (если требуется для других целей)
-      methodChannel.setMethodCallHandler { (call: FlutterMethodCall, result: FlutterResult) in
-        // Обработка вызовов от Flutter
-      }
-    }
-    
-    GeneratedPluginRegistrant.register(with: self)
-    return super.application(application, didFinishLaunchingWithOptions: launchOptions)
-  }
 
-  // Отправка FCM токена в Flutter
-  private func sendTokenToFlutter(token: String) {
-    if let controller = window?.rootViewController as? FlutterViewController {
-      let fcmChannel = FlutterMethodChannel(name: "com.example.fcm/token", binaryMessenger: controller.binaryMessenger)
-      fcmChannel.invokeMethod("setToken", arguments: token)
+      GeneratedPluginRegistrant.register(with: self)
+      return super.application(application, didFinishLaunchingWithOptions: launchOptions)
     }
-  }
 
-  // Обработка обновления FCM токена
-  func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
-    print("FCM токен обновлен: \(String(describing: fcmToken))")
-    if let token = fcmToken {
-      sendTokenToFlutter(token: token)
+    // Кэшируем токен при любом обновлении, но НЕ отправляем в Flutter!
+    func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
+      print("FCM токен обновлен: \(String(describing: fcmToken))")
+      cachedFcmToken = fcmToken
     }
-  }
 
-  // Обработка APNs токена
-  override func application(
-    _ application: UIApplication,
-    didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
-  ) {
-    Messaging.messaging().apnsToken = deviceToken
-    super.application(application, didRegisterForRemoteNotificationsWithDeviceToken: deviceToken)
-  }
+    override func application(
+      _ application: UIApplication,
+      didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
+    ) {
+      Messaging.messaging().apnsToken = deviceToken
+      super.application(application, didRegisterForRemoteNotificationsWithDeviceToken: deviceToken)
+    }
   
   // Обработка foreground уведомлений
   override func userNotificationCenter(

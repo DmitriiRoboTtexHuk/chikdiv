@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:advertising_id/advertising_id.dart';
 import 'package:appsflyer_sdk/appsflyer_sdk.dart' show AppsFlyerOptions, AppsflyerSdk;
+import 'package:chikchikdive/pushPermissions.dart';
 import 'package:device_info_plus/device_info_plus.dart' show DeviceInfoPlugin;
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart' show FirebaseMessaging, NotificationSettings, RemoteMessage;
@@ -68,7 +69,7 @@ class _ChickDiveLoadingScreenState extends State<ChickDiveLoadingScreen> {
     await Firebase.initializeApp();
     await _initPlatformState();
     await _initDeviceInfo();
-    await _initializeFirebaseMessaging();
+ //   await _initializeFirebaseMessaging();
 
   }
 
@@ -310,113 +311,72 @@ class _ChickDiveLoadingScreenState extends State<ChickDiveLoadingScreen> {
       setState(() { flyerId = value.toString(); });
     });
 
-    _appsflyerSdk.onInstallConversionData((res) {
-      Map<String, dynamic> payload = Map<String, dynamic>.from(res['payload']);
-      _sendPostWithAppsFlyerData(payload);
-    });
-  }
-
-  Future<void> _sendPostWithAppsFlyerData(Map<String, dynamic> appsFlyerData) async {
-    final url = Uri.parse('https://chickchickdive.com/config.php');
-    final headers = {'Content-Type': 'application/json'};
-
-    final Map<String, dynamic> requestData = {
-      // ... ваши поля ...
-      "adset": appsFlyerData["adset"] ?? "",
-      "af_adset": appsFlyerData["af_adset"] ?? "",
-      "adgroup": appsFlyerData["adgroup"] ?? "",
-      "campaign_id": appsFlyerData["campaign_id"] ?? "",
-      "af_status": appsFlyerData["af_status"],
-   //     "af_status": "Non-organic",
-      "agency": appsFlyerData["agency"] ?? "",
-      "af_sub3": appsFlyerData["af_sub3"],
-      "af_siteid": appsFlyerData["af_siteid"],
-      "adset_id": appsFlyerData["adset_id"] ?? "",
-      "is_fb": appsFlyerData["is_fb"] ?? false,
-      "is_first_launch": appsFlyerData["is_first_launch"] ?? false,
-      "click_time": appsFlyerData["click_time"] ?? "",
-      "iscache": appsFlyerData["iscache"] ?? false,
-      "ad_id": appsFlyerData["ad_id"] ?? "",
-      "af_sub1": appsFlyerData["af_sub1"] ?? "",
-      "campaign": appsFlyerData["campaign"] ?? "",
-      "is_paid": appsFlyerData["is_paid"] ?? false,
-      "af_sub4": appsFlyerData["af_sub4"] ?? "",
-      "adgroup_id": appsFlyerData["adgroup_id"] ?? "",
-      "is_mobile_data_terms_signed": appsFlyerData["is_mobile_data_terms_signed"] ?? false,
-      "af_channel": appsFlyerData["af_channel"] ?? "",
-      "af_sub5": appsFlyerData["af_sub5"],
-      "media_source": appsFlyerData["media_source"] ?? "",
-      "install_time": appsFlyerData["install_time"] ?? "",
-      "af_sub2": appsFlyerData["af_sub2"],
-
-      // Дополнительные поля
-      "af_id": flyerId,
-      "bundle_id": bundle,
-      "store_id": bundle,
-      "os": platform ?? "",
-      "locale": language ?? "",
-      "push_token": fcmToken ?? "",
-      "firebase_id": firebaseId ?? "",
-    };
-
-    print("load JSON ${json.encode(requestData)}");
-    try {
-      final response = await http.post(
-        url,
-        headers: headers,
-        body: json.encode(requestData),
-        encoding: Encoding.getByName('utf-8'),
-      );
+// 1. Сначала объяви функцию:
+    Future<void> saveAFStatusAndNavigate(String afStatus, BuildContext context, Map<String, dynamic> payload) async {
       final prefs = await SharedPreferences.getInstance();
-      if (response.statusCode == 200) {
-        print("Успешно отправлено: ${response.body}");
-        final Map<String, dynamic> respData = json.decode(response.body);
+      await prefs.setString('af_status', afStatus);
 
-        if (respData["ok"] == true && respData["url"] != null && respData["url"].toString().isNotEmpty) {
-          await prefs.setString('bad', respData["url"]);
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (_) => WebviewScreen(webUrl: respData["url"]),
-            ),
-          );
-        } else {
-          await prefs.setString('bad', "");
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (_) => ChickChickDiveMenuScreen(),
-            ),
-          );
-        }
-      } else {
-        await prefs.setString('bad', "");
+      print("Payload: $afStatus");
+
+      if (afStatus.contains("Organic")) {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
             builder: (_) => ChickChickDiveMenuScreen(),
           ),
         );
-        print("Ошибка при отправке: ${response.statusCode} — ${response.body}");
+      } else if (afStatus.contains("Non-Organic")) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ChickDivePromoScreen(payload: payload,af_id: flyerId,),
+          ),
+        );
       }
-    } catch (e) {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('bad', "");
-      print("Ошибка отправки: $e");
     }
+
+// 2. Потом используй:
+    _appsflyerSdk.onInstallConversionData((res) {
+      Map<String, dynamic> payload = Map<String, dynamic>.from(res['payload']);
+      final afStatus = payload["af_status"].toString();
+   print("Paydata "+payload.toString());
+      // Сохраняем значение асинхронно
+      saveAFStatusAndNavigate(afStatus, context, payload);
+    });
+
   }
+
 
   @override
   Widget build(BuildContext context) {
+
+    final media = MediaQuery.of(context);
+    final isLandscape = media.orientation == Orientation.landscape;
+
+    // Контент
+    final double contentWidth = isLandscape ? 430 : double.infinity;
+
+    // Фон
+    final double bgHeight = isLandscape ? 1080 : media.size.height;
+    final double bgWidth = media.size.width;
     return Scaffold(
       backgroundColor: const Color(0xFF201E48),
       body: Stack(
         children: [
           // --- Background wall ---
+
           Positioned.fill(
-            child: Image.asset(
-              'assets/background.png',
-              fit: BoxFit.cover,
+            child: FittedBox(
+              fit: BoxFit.contain,
+              child: SizedBox(
+                width: bgWidth,
+                height: bgHeight,
+                child: Image.asset(
+                  'assets/background.png',
+                  fit: BoxFit.cover,
+                  alignment: Alignment.center,
+                ),
+              ),
             ),
           ),
           // --- Top fire ---
@@ -473,6 +433,10 @@ class _ChickDiveLoadingScreenState extends State<ChickDiveLoadingScreen> {
                 ),
               ),
             ),
+          ),
+
+          Center(
+            child: CircularProgressIndicator(),
           ),
         ],
       ),
