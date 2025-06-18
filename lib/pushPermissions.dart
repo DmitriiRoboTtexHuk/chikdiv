@@ -260,8 +260,8 @@ print("paydata2 "+appsFlyerData.toString());
       final double contentWidth = isLandscape ? 430 : double.infinity;
 
       // Фон
-      final double bgHeight = isLandscape ? 1080 : media.size.height;
-      final double bgWidth = media.size.width;
+      final double bgHeight = isLandscape ? media.size.width : media.size.height;
+      final double bgWidth =isLandscape ? media.size.width:  media.size.height;
 
       return Scaffold(
         backgroundColor: const Color(0xFF201E48),
@@ -270,14 +270,13 @@ print("paydata2 "+appsFlyerData.toString());
             // --- Background (фон всегда на весь экран) ---
             Positioned.fill(
               child: FittedBox(
-                fit: BoxFit.contain,
+                fit: BoxFit.fill,
                 child: SizedBox(
-                  width: bgWidth,
-                  height: bgHeight,
+
                   child: Image.asset(
                     'assets/background.png',
-                    fit: BoxFit.cover,
-                    alignment: Alignment.center,
+                    fit: BoxFit.fill,
+                 //   alignment: Alignment.center,
                   ),
                 ),
               ),

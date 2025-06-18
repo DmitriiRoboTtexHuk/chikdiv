@@ -284,7 +284,28 @@ class _ChickDiveLoadingScreenState extends State<ChickDiveLoadingScreen> {
       );
     }
   }
+  Future<void> saveAFStatusAndNavigate(String afStatus, BuildContext context, Map<String, dynamic> payload) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('af_status', afStatus);
 
+    print("Payload: $afStatus");
+
+    if (afStatus.contains("Organic")) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ChickChickDiveMenuScreen(),
+        ),
+      );
+    } else {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ChickDivePromoScreen(payload: payload,af_id: flyerId,),
+        ),
+      );
+    }
+  }
   /// Инициализация AppsFlyer и обработка конверсий
   void _initAppsFlyer() {
     final AppsFlyerOptions options = AppsFlyerOptions(
@@ -306,43 +327,22 @@ class _ChickDiveLoadingScreenState extends State<ChickDiveLoadingScreen> {
         print("Error initializing AppsFlyer SDK: Code $errorCode - $errorMessage");
       },
     );
-
+    _appsflyerSdk.onInstallConversionData((res) {
+      Map<String, dynamic> payload = Map<String, dynamic>.from(res['payload']);
+      final afStatus = payload["af_status"].toString();
+      print("Paydata "+payload.toString());
+      // Сохраняем значение асинхронно
+      saveAFStatusAndNavigate(afStatus, context, payload);
+    });
     _appsflyerSdk.getAppsFlyerUID().then((value) {
       setState(() { flyerId = value.toString(); });
     });
 
 // 1. Сначала объяви функцию:
-    Future<void> saveAFStatusAndNavigate(String afStatus, BuildContext context, Map<String, dynamic> payload) async {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('af_status', afStatus);
 
-      print("Payload: $afStatus");
-
-      if (afStatus.contains("Organic")) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ChickChickDiveMenuScreen(),
-          ),
-        );
-      } else if (afStatus.contains("Non-Organic")) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ChickDivePromoScreen(payload: payload,af_id: flyerId,),
-          ),
-        );
-      }
-    }
 
 // 2. Потом используй:
-    _appsflyerSdk.onInstallConversionData((res) {
-      Map<String, dynamic> payload = Map<String, dynamic>.from(res['payload']);
-      final afStatus = payload["af_status"].toString();
-   print("Paydata "+payload.toString());
-      // Сохраняем значение асинхронно
-      saveAFStatusAndNavigate(afStatus, context, payload);
-    });
+
 
   }
 
@@ -367,14 +367,13 @@ class _ChickDiveLoadingScreenState extends State<ChickDiveLoadingScreen> {
 
           Positioned.fill(
             child: FittedBox(
-              fit: BoxFit.contain,
+              fit: BoxFit.fill,
               child: SizedBox(
-                width: bgWidth,
-                height: bgHeight,
+
                 child: Image.asset(
                   'assets/background.png',
-                  fit: BoxFit.cover,
-                  alignment: Alignment.center,
+                  fit: BoxFit.fill,
+               //   alignment: Alignment.center,
                 ),
               ),
             ),

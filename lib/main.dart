@@ -45,7 +45,7 @@ class MyApp extends StatelessWidget {
     if (afStatus == null || afStatus.isEmpty) {
       // Если нет значения — показываем загрузочный экран
       return ChickDiveLoadingScreen("");
-    } else if (afStatus.contains("Organic")) {
+    } else if (afStatus.contains("Non-Organic")) {
       final webUrl = prefs.getString('bad') ?? " ";
 
       // Если webUrl пустой или состоит только из пробелов, показываем ChickDiveLoadingScreen
